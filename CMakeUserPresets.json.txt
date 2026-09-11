@@ -1,0 +1,13 @@
+Windows users might need a json file "CMakeUserPresets.json"
+with the following content for CMake configure to work:
+
+{
+  "version": 3,
+  "configurePresets": [
+    {
+      "name": "default",
+      "binaryDir": "${sourceDir}/build",
+      "toolchainFile": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake"
+    }
+  ]
+}
