@@ -4,11 +4,12 @@
 #include "RegionAnalyzer.h"
 #include "ContourDetection.h"
 #include "LineEstimation.h"
+#include "IsValidQuad.h"
 
 int main()
 {
     CameraInput camera;
-    if (!camera.openCamera(0)) {
+    if (!camera.openCamera(4)) {
         std::cerr << "Could not open the video.\n";
         return 1;
     }
@@ -16,6 +17,7 @@ int main()
     RegionAnalyzer analyzer;
     ContourDetection detecter;
     LineEstimation liner;
+    IsValidQuad validator;
 
     cv::Mat frame, binary;
     // Read and display one frame at a time.
@@ -31,47 +33,44 @@ int main()
             cv::rectangle(regionsView, region.boundingBox, cv::Scalar(0, 255, 0), 2);
         }
         cv::imshow("Connected regions", regionsView);
-
-        // Stage 4?
-/**
-        for (const auto& reg : regions) {
         
-            // Get the contour
+        //Stage 4, 5 and 6
+        std::vector<QuadResult> validQuads;
+
+        for (const auto& reg : regions) {
             std::vector<cv::Point> contour = detecter.extractContour(binary, reg.boundingBox);
             
-            // Paint each pixel in the contour green
-            for (const auto& pt : contour) {
-                if (pt.y >= 0 && pt.y < frame.rows && pt.x >= 0 && pt.x < frame.cols) {
-                    frame.at<cv::Vec3b>(pt.y, pt.x) = cv::Vec3b(0, 255, 0);
-                }
+            // check if contour is to small or big
+            double area = cv::contourArea(contour);
+            double totalImageArea = static_cast<double>(binary.cols * binary.rows);
+
+            if (area < 200.0 || area > (totalImageArea * 0.75)) {
+                continue; 
+            }
+            
+            QuadResult quad = validator.processAndValidate(contour, liner);
+
+            if (quad.isValid) {
+                validQuads.push_back(quad); 
             }
         }
-        // displays the green pixels on top of normal frame.
-        cv::imshow("Detected Contours", frame);
-**/
-        // Stage 5?
-        for (const auto& reg : regions) {
-            // 1. Extract your manual contour
-            std::vector<cv::Point> contour = detecter.extractContour(binary, reg.boundingBox);
-            
-            if (contour.empty()) continue;
+        
+        for (int i = 0; i < validQuads.size(); i++) {
+            // draw lines between corners
+                cv::line(frame, validQuads[i].corners[0], validQuads[i].corners[1], cv::Scalar(0, 255, 255), 2);
+                cv::line(frame, validQuads[i].corners[1], validQuads[i].corners[2], cv::Scalar(0, 255, 255), 2);
+                cv::line(frame, validQuads[i].corners[2], validQuads[i].corners[3], cv::Scalar(0, 255, 255), 2);
+                cv::line(frame, validQuads[i].corners[3], validQuads[i].corners[0], cv::Scalar(0, 255, 255), 2);
 
-            // 2. Find the 4 corners using your custom function
-            std::vector<cv::Point> corners = liner.findCorners(contour);
+                // draw corners
+                cv::circle(frame, validQuads[i].corners[0], 4, cv::Scalar(0, 0, 255), -1);
+                cv::circle(frame, validQuads[i].corners[1], 4, cv::Scalar(0, 255, 255), -1);
+                cv::circle(frame, validQuads[i].corners[2], 4, cv::Scalar(255, 0, 0), -1);
+                cv::circle(frame, validQuads[i].corners[3], 4, cv::Scalar(255, 0, 255), -1);
 
-            if (corners.size() == 4) {
-                // 3. Draw green connecting lines to form the quadrilateral
-                cv::line(frame, corners[0], corners[1], cv::Scalar(0, 255, 0), 2);
-                cv::line(frame, corners[1], corners[2], cv::Scalar(0, 255, 0), 2);
-                cv::line(frame, corners[2], corners[3], cv::Scalar(0, 255, 0), 2);
-                cv::line(frame, corners[3], corners[0], cv::Scalar(0, 255, 0), 2);
+                std::string indicatorText = "Quad" + std::to_string(i);
 
-                // 4. Draw small colored circles at each corner for visibility
-                cv::circle(frame, corners[0], 4, cv::Scalar(0, 0, 255), -1);   // Top-Left: Red
-                cv::circle(frame, corners[1], 4, cv::Scalar(0, 255, 255), -1);  // Top-Right: Yellow
-                cv::circle(frame, corners[2], 4, cv::Scalar(255, 0, 0), -1);   // Bottom-Right: Blue
-                cv::circle(frame, corners[3], 4, cv::Scalar(255, 0, 255), -1);  // Bottom-Left: Magenta
-            }
+                cv::putText(frame, indicatorText, validQuads[i].corners[0] - cv::Point(0, 10), cv::FONT_HERSHEY_SIMPLEX, 0.6, cv::Scalar(0, 255, 0), 2);
         }
 
         cv::imshow("Detected Quadrilateral", frame);
