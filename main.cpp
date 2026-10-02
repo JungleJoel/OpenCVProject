@@ -5,6 +5,7 @@
 #include "ContourDetection.h"
 #include "LineEstimation.h"
 #include "IsValidQuad.h"
+#include "MarkerRecognizer.h"
 
 int main()
 {
@@ -18,6 +19,7 @@ int main()
     ContourDetection detecter;
     LineEstimation liner;
     IsValidQuad validator;
+    MarkerRecognizer recognizer;
 
     cv::Mat frame, binary;
     // Read and display one frame at a time.
@@ -54,7 +56,21 @@ int main()
                 validQuads.push_back(quad); 
             }
         }
-        
+
+        // Stage 7
+        cv::Mat grayscaleFrame; // grayscale needed for Stage 8
+        cv::cvtColor(frame, grayscaleFrame, cv::COLOR_BGR2GRAY);
+        std::vector<cv::Mat> warps;
+        for (const auto& quad : validQuads) {
+            warps.push_back(recognizer.warpMarker(grayscaleFrame, quad.corners));
+        }
+        cv::Mat strip = cv::Mat::zeros(60, 60, CV_8UC1); // black square when there are no quads detected
+        if (!warps.empty()) {
+            cv::hconcat(warps, strip); // all warps side by side
+        }
+        cv::resize(strip, strip, cv::Size(), 4, 4, cv::INTER_NEAREST); // enlarge
+        cv::imshow("Warped", strip);
+
         for (int i = 0; i < validQuads.size(); i++) {
             // draw lines between corners
                 cv::line(frame, validQuads[i].corners[0], validQuads[i].corners[1], cv::Scalar(0, 255, 255), 2);
