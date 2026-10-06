@@ -57,12 +57,17 @@ int main()
             }
         }
 
-        // Stage 7
-        cv::Mat grayscaleFrame; // grayscale needed for Stage 8
+        // Stage 7 + 8
+        cv::Mat grayscaleFrame;
         cv::cvtColor(frame, grayscaleFrame, cv::COLOR_BGR2GRAY);
         std::vector<cv::Mat> warps;
+        MarkerResult marker;
         for (const auto& quad : validQuads) {
-            warps.push_back(recognizer.warpMarker(grayscaleFrame, quad.corners));
+            cv::Mat warped = recognizer.warpMarker(grayscaleFrame, quad.corners);
+            warps.push_back(warped);
+            if (!marker.found) {
+                marker = recognizer.recognizeMarker(warped, quad.corners);
+            }
         }
         cv::Mat strip = cv::Mat::zeros(60, 60, CV_8UC1); // black square when there are no quads detected
         if (!warps.empty()) {
@@ -87,6 +92,12 @@ int main()
                 std::string indicatorText = "Quad" + std::to_string(i);
 
                 cv::putText(frame, indicatorText, validQuads[i].corners[0] - cv::Point(0, 10), cv::FONT_HERSHEY_SIMPLEX, 0.6, cv::Scalar(0, 255, 0), 2);
+        }
+
+        // Stage 8: tag the marker in the view
+        if (marker.found) {
+            cv::circle(frame, marker.corners[0], 10, cv::Scalar(0, 0, 255), 2);
+            cv::putText(frame, "MARKER top left", marker.corners[0] + cv::Point2f(12, 20), cv::FONT_HERSHEY_SIMPLEX, 0.6, cv::Scalar(0, 0, 255), 2);
         }
 
         cv::imshow("Detected Quadrilateral", frame);
