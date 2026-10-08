@@ -9,7 +9,14 @@ find_package(OpenCV REQUIRED)
 add_executable(camera_grab main.cpp
         CameraInput.cpp
         CameraInput.h
-        RegionAnalyzer.cpp)
+        RegionAnalyzer.cpp
+        ContourDetection.cpp
+        ContourDetection.h
+        LineEstimation.cpp
+        LineEstimation.h
+        IsValidQuad.cpp
+        IsValidQuad.h)
+# Give the program access to OpenCV headers and libraries.
 target_include_directories(camera_grab PRIVATE ${OpenCV_INCLUDE_DIRS})
 target_link_libraries(camera_grab PRIVATE ${OpenCV_LIBS})
 
