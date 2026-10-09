@@ -10,7 +10,7 @@
 int main()
 {
     CameraInput camera;
-    if (!camera.openCamera(4)) {
+    if (!camera.openCamera(0)) {
         std::cerr << "Could not open the video.\n";
         return 1;
     }
@@ -39,6 +39,8 @@ int main()
         //Stage 4, 5 and 6
         std::vector<QuadResult> validQuads;
 
+        cv::Mat displayImage = frame.clone();
+
         for (const auto& reg : regions) {
             std::vector<cv::Point> contour = detecter.extractContour(binary, reg.boundingBox);
             
@@ -48,6 +50,12 @@ int main()
 
             if (area < 200.0 || area > (totalImageArea * 0.75)) {
                 continue; 
+            }
+
+            for (const auto& pt : contour) {
+                if (pt.y >= 0 && pt.y < displayImage.rows && pt.x >= 0 && pt.x < displayImage.cols) {
+                    displayImage.at<cv::Vec3b>(pt.y, pt.x) = cv::Vec3b(0, 255, 0); // Bright Green
+                }
             }
             
             QuadResult quad = validator.processAndValidate(contour, liner);
@@ -93,13 +101,14 @@ int main()
 
                 cv::putText(frame, indicatorText, validQuads[i].corners[0] - cv::Point(0, 10), cv::FONT_HERSHEY_SIMPLEX, 0.6, cv::Scalar(0, 255, 0), 2);
         }
-
+        
         // Stage 8: tag the marker in the view
         if (marker.found) {
             cv::circle(frame, marker.corners[0], 10, cv::Scalar(0, 0, 255), 2);
             cv::putText(frame, "MARKER top left", marker.corners[0] + cv::Point2f(12, 20), cv::FONT_HERSHEY_SIMPLEX, 0.6, cv::Scalar(0, 0, 255), 2);
         }
 
+        cv::imshow("Detected Contour", displayImage);
         cv::imshow("Detected Quadrilateral", frame);
 
         // esc closes program.
