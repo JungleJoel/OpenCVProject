@@ -1,7 +1,11 @@
 Kevin Taverner
-Component: Camera Input and Validation
-Files: CameraInput.h, CameraInput.cpp, main.cpp
+Component: Camera Input and Validation, Usable Marker Values and Virtual Lamp
+Files: CameraInput.h, CameraInput.cpp, main.cpp, InteractionMapping.h 
+InteractionMapping.cpp, LampRenderer.h, LampRenderer.cpp
 Responsible for camera/video source opening, frame capture and validation.
+Converting marker angle into usable brightness value between 0-100%. Renders a 
+virtual lamp that is controlled by this value and also turns on and off by the 
+marker detectiong existence.
 
 Love Skön
 Component: Binarization and Connected-region Labeling

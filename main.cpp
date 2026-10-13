@@ -7,9 +7,10 @@
 #include "IsValidQuad.h"
 #include "MarkerRecognizer.h"
 #include "PoseEstimator.h"
+#include "InteractionMapping.h"
+#include "LampRenderer.h"
 
-int main()
-{
+int main() {
     CameraInput camera;
     if (!camera.openCamera(0)) {
         std::cerr << "Could not open the video.\n";
@@ -22,6 +23,8 @@ int main()
     IsValidQuad validator;
     MarkerRecognizer recognizer;
     PoseEstimator poseEstimator;
+    InteractionMapping interactionMapping;
+    LampRenderer lampRenderer;
 
     cv::Mat frame, binary;
     // Read and display one frame at a time.
@@ -33,37 +36,37 @@ int main()
         cv::imshow("Binarised", binary);
 
         cv::Mat regionsView = frame.clone();
-        for (const auto &region : regions) {
+        for (const auto &region: regions) {
             cv::rectangle(regionsView, region.boundingBox, cv::Scalar(0, 255, 0), 2);
         }
         cv::imshow("Connected regions", regionsView);
-        
+
         //Stage 4, 5 and 6
         std::vector<QuadResult> validQuads;
 
         cv::Mat displayImage = frame.clone();
 
-        for (const auto& reg : regions) {
+        for (const auto &reg: regions) {
             std::vector<cv::Point> contour = detecter.extractContour(binary, reg.boundingBox);
-            
+
             // check if contour is to small or big
             double area = cv::contourArea(contour);
             double totalImageArea = static_cast<double>(binary.cols * binary.rows);
 
             if (area < 200.0 || area > (totalImageArea * 0.75)) {
-                continue; 
+                continue;
             }
 
-            for (const auto& pt : contour) {
+            for (const auto &pt: contour) {
                 if (pt.y >= 0 && pt.y < displayImage.rows && pt.x >= 0 && pt.x < displayImage.cols) {
                     displayImage.at<cv::Vec3b>(pt.y, pt.x) = cv::Vec3b(0, 255, 0); // Bright Green
                 }
             }
-            
+
             QuadResult quad = validator.processAndValidate(contour, liner);
 
             if (quad.isValid) {
-                validQuads.push_back(quad); 
+                validQuads.push_back(quad);
             }
         }
 
@@ -72,7 +75,7 @@ int main()
         cv::cvtColor(frame, grayscaleFrame, cv::COLOR_BGR2GRAY);
         std::vector<cv::Mat> warps;
         MarkerResult marker;
-        for (const auto& quad : validQuads) {
+        for (const auto &quad: validQuads) {
             cv::Mat warped = recognizer.warpMarker(grayscaleFrame, quad.corners);
             warps.push_back(warped);
             if (!marker.found) {
@@ -88,26 +91,28 @@ int main()
 
         for (int i = 0; i < validQuads.size(); i++) {
             // draw lines between corners
-                cv::line(frame, validQuads[i].corners[0], validQuads[i].corners[1], cv::Scalar(0, 255, 255), 2);
-                cv::line(frame, validQuads[i].corners[1], validQuads[i].corners[2], cv::Scalar(0, 255, 255), 2);
-                cv::line(frame, validQuads[i].corners[2], validQuads[i].corners[3], cv::Scalar(0, 255, 255), 2);
-                cv::line(frame, validQuads[i].corners[3], validQuads[i].corners[0], cv::Scalar(0, 255, 255), 2);
+            cv::line(frame, validQuads[i].corners[0], validQuads[i].corners[1], cv::Scalar(0, 255, 255), 2);
+            cv::line(frame, validQuads[i].corners[1], validQuads[i].corners[2], cv::Scalar(0, 255, 255), 2);
+            cv::line(frame, validQuads[i].corners[2], validQuads[i].corners[3], cv::Scalar(0, 255, 255), 2);
+            cv::line(frame, validQuads[i].corners[3], validQuads[i].corners[0], cv::Scalar(0, 255, 255), 2);
 
-                // draw corners
-                cv::circle(frame, validQuads[i].corners[0], 4, cv::Scalar(0, 0, 255), -1);
-                cv::circle(frame, validQuads[i].corners[1], 4, cv::Scalar(0, 255, 255), -1);
-                cv::circle(frame, validQuads[i].corners[2], 4, cv::Scalar(255, 0, 0), -1);
-                cv::circle(frame, validQuads[i].corners[3], 4, cv::Scalar(255, 0, 255), -1);
+            // draw corners
+            cv::circle(frame, validQuads[i].corners[0], 4, cv::Scalar(0, 0, 255), -1);
+            cv::circle(frame, validQuads[i].corners[1], 4, cv::Scalar(0, 255, 255), -1);
+            cv::circle(frame, validQuads[i].corners[2], 4, cv::Scalar(255, 0, 0), -1);
+            cv::circle(frame, validQuads[i].corners[3], 4, cv::Scalar(255, 0, 255), -1);
 
-                std::string indicatorText = "Quad" + std::to_string(i);
+            std::string indicatorText = "Quad" + std::to_string(i);
 
-                cv::putText(frame, indicatorText, validQuads[i].corners[0] - cv::Point(0, 10), cv::FONT_HERSHEY_SIMPLEX, 0.6, cv::Scalar(0, 255, 0), 2);
+            cv::putText(frame, indicatorText, validQuads[i].corners[0] - cv::Point(0, 10), cv::FONT_HERSHEY_SIMPLEX,
+                        0.6, cv::Scalar(0, 255, 0), 2);
         }
-        
+
         // Stage 8: tag the marker in the view
         if (marker.found) {
             cv::circle(frame, marker.corners[0], 10, cv::Scalar(0, 0, 255), 2);
-            cv::putText(frame, "MARKER top left", marker.corners[0] + cv::Point2f(12, 20), cv::FONT_HERSHEY_SIMPLEX, 0.6, cv::Scalar(0, 0, 255), 2);
+            cv::putText(frame, "MARKER top left", marker.corners[0] + cv::Point2f(12, 20), cv::FONT_HERSHEY_SIMPLEX,
+                        0.6, cv::Scalar(0, 0, 255), 2);
         }
 
         // Stage 9: marker pose and angle text
@@ -115,9 +120,20 @@ int main()
         if (marker.found) {
             pose = poseEstimator.estimatePose(marker.corners, frame.size());
             poseEstimator.drawAxes(frame, pose);
-            std::string poseText = "angle " + std::to_string(static_cast<int>(pose.angle)) + " deg, distance " + std::to_string(static_cast<int>(pose.tvec[2])) + " mm";
+            std::string poseText = "angle " + std::to_string(static_cast<int>(pose.angle)) + " deg, distance " +
+                                   std::to_string(static_cast<int>(pose.tvec[2])) + " mm";
             cv::putText(frame, poseText, cv::Point(10, 30), cv::FONT_HERSHEY_SIMPLEX, 0.7, cv::Scalar(0, 0, 255), 2);
         }
+
+        // Stage 10: Convert marker angle to lamp brightness
+        LampState lamp = interactionMapping.update(
+            marker.found,
+            pose.angle
+        );
+
+        // Stage 11: Display virtual lamp
+        cv::Mat lampImage = lampRenderer.render(lamp);
+        cv::imshow("Lamp", lampImage);
 
         cv::imshow("Detected Contour", displayImage);
         cv::imshow("Detected Quadrilateral", frame);
