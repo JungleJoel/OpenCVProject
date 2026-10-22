@@ -34,3 +34,8 @@ add_executable(test_region_analyzer tests/test_region_analyzer.cpp RegionAnalyze
 target_include_directories(test_region_analyzer PRIVATE ${CMAKE_SOURCE_DIR} ${OpenCV_INCLUDE_DIRS})
 target_link_libraries(test_region_analyzer PRIVATE ${OpenCV_LIBS})
 add_test(NAME region_analyzer COMMAND test_region_analyzer)
+
+# Unit tests for the PoseEstimator -> InteractionMapping boundary. ctest || ./test_interaction_mapping
+add_executable(test_interaction_mapping tests/test_interaction_mapping.cpp InteractionMapping.cpp)
+target_include_directories(test_interaction_mapping PRIVATE ${CMAKE_SOURCE_DIR})
+add_test(NAME interaction_mapping COMMAND test_interaction_mapping)
