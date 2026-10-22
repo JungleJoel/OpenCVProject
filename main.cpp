@@ -10,12 +10,23 @@
 #include "InteractionMapping.h"
 #include "LampRenderer.h"
 
-int main() {
+// Usage: camera_grab [camera index | video path]   (default: camera 0)
+static bool openSource(CameraInput &camera, int argc, char **argv) {
+    if (argc < 2) {
+        return camera.openCamera(0);
+    }
+    std::string arg = argv[1];
+    bool isIndex = !arg.empty() && arg.find_first_not_of("0123456789") == std::string::npos;
+    return isIndex ? camera.openCamera(std::stoi(arg)) : camera.openVideo(arg);
+}
+
+int main(int argc, char **argv) {
     CameraInput camera;
-    if (!camera.openCamera(0)) {
-        std::cerr << "Could not open the video.\n";
+    if (!openSource(camera, argc, argv)) {
+        std::cerr << "Error: " << camera.lastError() << "\n";
         return 1;
     }
+    std::cout << "Source: " << camera.describeSource() << "\n";
 
     RegionAnalyzer analyzer;
     ContourDetection detecter;
@@ -28,8 +39,21 @@ int main() {
 
     cv::Mat frame, binary;
     bool debugNextFrame = false;
-    // Read and display one frame at a time.
-    while (camera.getFrame(frame)) {
+    // Read and display one frame at a time. A dropped camera frame is logged
+    // and skipped; only end of stream or a dead source ends the loop.
+    while (true) {
+        FrameStatus status = camera.readFrame(frame);
+        if (status == FrameStatus::ReadFailed) {
+            std::cerr << "Warning: " << camera.lastError() << ", retrying\n";
+            if (cv::waitKey(20) == 27) {
+                break;
+            }
+            continue;
+        }
+        if (status != FrameStatus::Ok) {
+            std::cout << "Stopping: " << camera.lastError() << "\n";
+            break;
+        }
         cv::imshow("OpenCV video test", frame);
 
         //debug line

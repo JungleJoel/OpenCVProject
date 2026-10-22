@@ -15,6 +15,12 @@ Component: Binarization and Connected-region Labeling
 Files: RegionAnalyzer.cpp, RegionAnalyzer.h, test_region_analyzer.cpp
 Responsible for turning frames into binary images and extracting filtered candidate regions for marker detection.
 
+For individual assignment 2, I also investigated the CameraInput, with Kevin's agreement. getFrame returned false both at end of a video and
+when a camera dropped a single frame, and main's loop ended the program on the first
+false, so one dropped frame silently exited with status 0. Added readFrame with a
+FrameStatus result, retries for live sources, lastError/describeSource diagnostics,
+tests/test_camera_input.cpp, and a camera-index-or-video-path argument to main.
+
 Joel Seger
 Component: Contour Detection, Line Estimation, Quadliteral Validation
 Files: CountorDetection.cpp, CountorDetection.h, LineEstimation.cpp, LineEstimation.h, IsValidQuad.cpp, IsValidQuad.h
