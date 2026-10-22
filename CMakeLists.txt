@@ -34,3 +34,9 @@ add_executable(test_region_analyzer tests/test_region_analyzer.cpp RegionAnalyze
 target_include_directories(test_region_analyzer PRIVATE ${CMAKE_SOURCE_DIR} ${OpenCV_INCLUDE_DIRS})
 target_link_libraries(test_region_analyzer PRIVATE ${OpenCV_LIBS})
 add_test(NAME region_analyzer COMMAND test_region_analyzer)
+
+# Test for Marker Recognizer
+add_executable(test_marker_recognizer tests/test_marker_recognizer.cpp MarkerRecognizer.cpp)
+target_include_directories(test_marker_recognizer PRIVATE ${CMAKE_SOURCE_DIR} ${OpenCV_INCLUDE_DIRS})
+target_link_libraries(test_marker_recognizer PRIVATE ${OpenCV_LIBS})
+add_test(NAME marker_recognizer COMMAND test_marker_recognizer)

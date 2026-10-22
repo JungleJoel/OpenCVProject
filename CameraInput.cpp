@@ -7,7 +7,7 @@
 CameraInput::CameraInput() = default;
 
 bool CameraInput::openCamera(int cameraIndex) {
-    return capture.open(cameraIndex);
+    return capture.open(4);
 }
 
 bool CameraInput::openVideo(const std::string &videoPath) {

@@ -43,12 +43,16 @@ MarkerResult MarkerRecognizer::recognizeMarker(const cv::Mat& warped, const std:
 
 cv::Mat MarkerRecognizer::readBits(const cv::Mat& warped) const {
     cv::Mat binary;
-    cv::threshold(warped, binary, 0, 1, cv::THRESH_BINARY | cv::THRESH_OTSU);
+    cv::threshold(warped, binary, 0, 255, cv::THRESH_BINARY | cv::THRESH_OTSU);
 
+    const int margin = cellSize / 4;          // skip the blurry cell edges
+    const int inner = cellSize - 2 * margin;  // the middle part of the cell
     cv::Mat bits(cellCount, cellCount, CV_8UC1);
     for (int row = 0; row < cellCount; row++) {
         for (int col = 0; col < cellCount; col++) {
-            bits.at<uchar>(row, col) = binary.at<uchar>(row * cellSize + cellSize / 2, col * cellSize + cellSize / 2);
+            cv::Rect cell(col * cellSize + margin, row * cellSize + margin, inner, inner);
+            // majority vote: more than half white pixels -> bit is 1
+            bits.at<uchar>(row, col) = cv::countNonZero(binary(cell)) > (inner * inner) / 2 ? 1 : 0;
         }
     }
     return bits;
